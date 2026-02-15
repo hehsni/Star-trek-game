@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Star Trek: Deep Space Nine - USS Defiant</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -118,6 +120,169 @@
             text-align: center;
             line-height: 1.8;
         }
+
+        /* --- Mobile Touch Controls --- */
+        #touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            top: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        #touch-controls.active {
+            display: block;
+        }
+        #joystick-zone {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            pointer-events: all;
+            touch-action: none;
+        }
+        #joystick-base {
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255, 102, 0, 0.15);
+            border: 2px solid rgba(255, 102, 0, 0.4);
+            left: 10px;
+            top: 10px;
+        }
+        #joystick-thumb {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 153, 0, 0.4);
+            border: 2px solid rgba(255, 153, 0, 0.7);
+            left: 50px;
+            top: 50px;
+            transform: translate(-50%, -50%);
+            transition: none;
+        }
+        .touch-btn {
+            position: absolute;
+            pointer-events: all;
+            touch-action: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            color: #ff9900;
+            text-shadow: 0 0 6px #ff6600;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .touch-btn.fire-btn {
+            width: 70px;
+            height: 70px;
+            bottom: 80px;
+            right: 30px;
+            background: rgba(255, 100, 50, 0.2);
+            border: 2px solid rgba(255, 100, 50, 0.5);
+        }
+        .touch-btn.fire-btn.pressed {
+            background: rgba(255, 100, 50, 0.5);
+        }
+        .touch-btn.torpedo-btn {
+            width: 56px;
+            height: 56px;
+            bottom: 160px;
+            right: 40px;
+            background: rgba(100, 150, 255, 0.2);
+            border: 2px solid rgba(100, 150, 255, 0.5);
+        }
+        .touch-btn.torpedo-btn.pressed {
+            background: rgba(100, 150, 255, 0.5);
+        }
+        .touch-btn.shield-btn {
+            width: 50px;
+            height: 50px;
+            bottom: 30px;
+            right: 110px;
+            background: rgba(100, 200, 255, 0.15);
+            border: 2px solid rgba(100, 200, 255, 0.4);
+        }
+        .touch-btn.shield-btn.pressed {
+            background: rgba(100, 200, 255, 0.4);
+        }
+        .touch-btn.turbo-btn {
+            width: 50px;
+            height: 50px;
+            bottom: 30px;
+            left: 185px;
+            background: rgba(255, 200, 50, 0.15);
+            border: 2px solid rgba(255, 200, 50, 0.4);
+        }
+        .touch-btn.turbo-btn.pressed {
+            background: rgba(255, 200, 50, 0.4);
+        }
+
+        /* Mobile HUD adjustments */
+        @media (max-width: 768px) {
+            #hud-top {
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                padding: 5px 10px;
+            }
+            .hud-panel {
+                font-size: 10px;
+                padding: 4px 10px;
+            }
+            #minimap {
+                width: 120px;
+                height: 120px;
+                bottom: 175px;
+                right: 5px;
+            }
+            #mission-log {
+                max-width: 250px;
+                font-size: 9px;
+                bottom: 175px;
+                left: 5px;
+                padding: 5px;
+            }
+            #title-screen h1 {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+            #title-screen h2 {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+            #title-screen h3 {
+                font-size: 14px;
+                margin-bottom: 30px;
+            }
+            .controls-info {
+                margin-top: 25px;
+                font-size: 10px;
+            }
+            .controls-info.mobile-info {
+                display: block;
+            }
+            .controls-info.desktop-info {
+                display: none;
+            }
+        }
+        @media (min-width: 769px) {
+            .controls-info.mobile-info {
+                display: none;
+            }
+            .controls-info.desktop-info {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
@@ -128,11 +293,14 @@
         <h2>DEEP SPACE NINE</h2>
         <h3>USS Defiant NX-74205</h3>
         <button id="start-btn">ENGAGER</button>
-        <div class="controls-info">
+        <div class="controls-info desktop-info">
             ZQSD / Flèches - Piloter le Defiant<br>
             ESPACE - Phasers &nbsp;|&nbsp; F - Torpilles quantiques<br>
-            SHIFT - Turbo &nbsp;|&nbsp; E - Boucliers<br>
-            TAB - Scanner longue portée
+            SHIFT - Turbo &nbsp;|&nbsp; E - Boucliers
+        </div>
+        <div class="controls-info mobile-info">
+            Joystick gauche - Piloter<br>
+            Boutons droite - Phasers, Torpilles, Boucliers
         </div>
     </div>
 
@@ -158,6 +326,18 @@
 
     <div id="mission-log" style="display:none;">
         <div class="log-entry">> Station DS9 en vue...</div>
+    </div>
+
+    <!-- Touch Controls Overlay -->
+    <div id="touch-controls">
+        <div id="joystick-zone">
+            <div id="joystick-base"></div>
+            <div id="joystick-thumb"></div>
+        </div>
+        <div class="touch-btn fire-btn" id="btn-fire">TIR</div>
+        <div class="touch-btn torpedo-btn" id="btn-torpedo">TORP</div>
+        <div class="touch-btn shield-btn" id="btn-shield">BOU</div>
+        <div class="touch-btn turbo-btn" id="btn-turbo">WARP</div>
     </div>
 
     <script src="game.js"></script>

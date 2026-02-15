@@ -34,12 +34,130 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+// --- Mobile Detection & Touch Controls ---
+const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || ('ontouchstart' in window && window.innerWidth < 1024);
+
+const touch = {
+    joystickX: 0,    // -1 to 1
+    joystickY: 0,    // -1 to 1
+    joystickActive: false,
+    fire: false,
+    torpedo: false,
+    shield: false,
+    turbo: false,
+    joystickTouchId: null
+};
+
+function initTouchControls() {
+    const touchControls = document.getElementById('touch-controls');
+    touchControls.classList.add('active');
+
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickThumb = document.getElementById('joystick-thumb');
+    const joystickBase = document.getElementById('joystick-base');
+
+    const maxDist = 50;
+
+    function getJoystickCenter() {
+        const rect = joystickBase.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+
+    joystickZone.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        touch.joystickTouchId = t.identifier;
+        touch.joystickActive = true;
+        updateJoystick(t);
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchmove', e => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touch.joystickTouchId) {
+                updateJoystick(e.changedTouches[i]);
+            }
+        }
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchend', e => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touch.joystickTouchId) {
+                touch.joystickActive = false;
+                touch.joystickX = 0;
+                touch.joystickY = 0;
+                touch.joystickTouchId = null;
+                joystickThumb.style.left = '50%';
+                joystickThumb.style.top = '50%';
+                joystickThumb.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+    });
+
+    function updateJoystick(t) {
+        const center = getJoystickCenter();
+        let dx = t.clientX - center.x;
+        let dy = t.clientY - center.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > maxDist) {
+            dx = (dx / dist) * maxDist;
+            dy = (dy / dist) * maxDist;
+        }
+        touch.joystickX = dx / maxDist;
+        touch.joystickY = dy / maxDist;
+
+        const baseRect = joystickBase.getBoundingClientRect();
+        const zoneRect = joystickZone.getBoundingClientRect();
+        const thumbX = (baseRect.left - zoneRect.left) + baseRect.width / 2 + dx;
+        const thumbY = (baseRect.top - zoneRect.top) + baseRect.height / 2 + dy;
+        joystickThumb.style.left = thumbX + 'px';
+        joystickThumb.style.top = thumbY + 'px';
+        joystickThumb.style.transform = 'translate(-50%, -50%)';
+    }
+
+    // Action buttons
+    function setupButton(id, key) {
+        const btn = document.getElementById(id);
+        btn.addEventListener('touchstart', e => {
+            e.preventDefault();
+            touch[key] = true;
+            btn.classList.add('pressed');
+        }, { passive: false });
+        btn.addEventListener('touchend', e => {
+            e.preventDefault();
+            touch[key] = false;
+            btn.classList.remove('pressed');
+        }, { passive: false });
+        btn.addEventListener('touchcancel', e => {
+            touch[key] = false;
+            btn.classList.remove('pressed');
+        });
+    }
+
+    setupButton('btn-fire', 'fire');
+    setupButton('btn-torpedo', 'torpedo');
+    setupButton('btn-shield', 'shield');
+    setupButton('btn-turbo', 'turbo');
+
+    // Prevent default touch behaviors on canvas
+    canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+}
+
+if (isMobile) {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Will be initialized on game start
+    });
+}
+
 // --- Resize ---
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    minimapCanvas.width = 180;
-    minimapCanvas.height = 180;
+    const mmSize = window.innerWidth < 768 ? 120 : 180;
+    minimapCanvas.width = mmSize;
+    minimapCanvas.height = mmSize;
 }
 window.addEventListener('resize', resize);
 resize();
@@ -370,7 +488,7 @@ function drawDefiant(pos) {
 
     // Impulse engine glow
     if (defiant.speed > 0.5) {
-        const turbo = keys['ShiftLeft'] || keys['ShiftRight'];
+        const turbo = keys['ShiftLeft'] || keys['ShiftRight'] || touch.turbo;
         const engineColor = turbo ? 'rgba(255, 150, 50, 0.8)' : 'rgba(255, 100, 50, 0.6)';
         const engineSize = turbo ? 12 : 8;
         const grad = ctx.createRadialGradient(-15, 0, 0, -15, 0, engineSize);
@@ -651,12 +769,14 @@ function drawParticles() {
 }
 
 function drawMinimap() {
-    minimapCtx.clearRect(0, 0, 180, 180);
+    const mmW = minimapCanvas.width;
+    const mmH = minimapCanvas.height;
+    minimapCtx.clearRect(0, 0, mmW, mmH);
     minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    minimapCtx.fillRect(0, 0, 180, 180);
+    minimapCtx.fillRect(0, 0, mmW, mmH);
 
-    const scale = 180 / (WORLD_SIZE * 1.5);
-    const cx = 90, cy = 90;
+    const scale = mmW / (WORLD_SIZE * 1.5);
+    const cx = mmW / 2, cy = mmH / 2;
 
     // DS9
     minimapCtx.fillStyle = '#ff8800';
@@ -692,7 +812,7 @@ function drawMinimap() {
     // Border
     minimapCtx.strokeStyle = '#ff6600';
     minimapCtx.lineWidth = 1;
-    minimapCtx.strokeRect(0, 0, 180, 180);
+    minimapCtx.strokeRect(0, 0, mmW, mmH);
 }
 
 // ============================================================
@@ -700,18 +820,18 @@ function drawMinimap() {
 // ============================================================
 
 function updateDefiant() {
-    const turbo = keys['ShiftLeft'] || keys['ShiftRight'];
+    const turbo = keys['ShiftLeft'] || keys['ShiftRight'] || touch.turbo;
     const maxSpd = turbo ? defiant.turboSpeed : defiant.maxSpeed;
     const accel = 0.12;
     const friction = 0.97;
     const turnSpeed = 0.04;
 
-    // Rotation
+    // Rotation (keyboard)
     let turning = false;
     if (keys['KeyA'] || keys['KeyQ'] || keys['ArrowLeft']) { defiant.angle -= turnSpeed; turning = true; }
     if (keys['KeyD'] || keys['ArrowRight']) { defiant.angle += turnSpeed; turning = true; }
 
-    // Thrust
+    // Thrust (keyboard)
     if (keys['KeyW'] || keys['KeyZ'] || keys['ArrowUp']) {
         defiant.vx += Math.cos(defiant.angle) * accel;
         defiant.vy += Math.sin(defiant.angle) * accel;
@@ -719,6 +839,26 @@ function updateDefiant() {
     if (keys['KeyS'] || keys['ArrowDown']) {
         defiant.vx -= Math.cos(defiant.angle) * accel * 0.5;
         defiant.vy -= Math.sin(defiant.angle) * accel * 0.5;
+    }
+
+    // Touch joystick input
+    if (touch.joystickActive) {
+        const jx = touch.joystickX;
+        const jy = touch.joystickY;
+        const jMag = Math.sqrt(jx * jx + jy * jy);
+
+        if (jMag > 0.15) {
+            // Smoothly rotate toward joystick direction
+            const targetAngle = Math.atan2(jy, jx);
+            let angleDiff = targetAngle - defiant.angle;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            defiant.angle += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnSpeed * 1.5);
+
+            // Thrust proportional to joystick magnitude
+            defiant.vx += Math.cos(defiant.angle) * accel * jMag;
+            defiant.vy += Math.sin(defiant.angle) * accel * jMag;
+        }
     }
 
     // Apply friction
@@ -744,7 +884,7 @@ function updateDefiant() {
     if (defiant.y > bound) defiant.y = bound;
 
     // Shields
-    if (keys['KeyE'] && defiant.shieldCooldown <= 0) {
+    if ((keys['KeyE'] || touch.shield) && defiant.shieldCooldown <= 0) {
         defiant.shieldsActive = !defiant.shieldsActive;
         defiant.shieldCooldown = 20;
     }
@@ -760,14 +900,14 @@ function updateDefiant() {
 
     // Phasers
     if (defiant.phaserCooldown > 0) defiant.phaserCooldown--;
-    if (keys['Space'] && defiant.phaserCooldown <= 0) {
+    if ((keys['Space'] || touch.fire) && defiant.phaserCooldown <= 0) {
         firePhasers();
         defiant.phaserCooldown = 10;
     }
 
     // Torpedoes
     if (defiant.torpedoCooldown > 0) defiant.torpedoCooldown--;
-    if (keys['KeyF'] && defiant.torpedoCooldown <= 0 && defiant.torpedoes > 0) {
+    if ((keys['KeyF'] || touch.torpedo) && defiant.torpedoCooldown <= 0 && defiant.torpedoes > 0) {
         fireTorpedo();
         defiant.torpedoCooldown = 30;
     }
@@ -1213,6 +1353,10 @@ document.getElementById('start-btn').addEventListener('click', () => {
     gameStarted = true;
     addLog('> USS Defiant prêt au lancement.');
     addLog('> Capitaine, la station est en vue.');
+
+    if (isMobile) {
+        initTouchControls();
+    }
 });
 
 gameLoop();

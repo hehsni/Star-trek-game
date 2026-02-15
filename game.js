@@ -242,10 +242,10 @@ let particles = [];
 // --- Enemies ---
 let enemies = [];
 const ENEMY_TYPES = {
-    jemhadar: { name: "Jem'Hadar", color: '#9933ff', hull: 40, speed: 2.5, fireRate: 120, score: 100, size: 14 },
-    cardassian: { name: 'Cardassien', color: '#ccaa00', hull: 50, speed: 2, fireRate: 150, score: 80, size: 16 },
-    breen: { name: 'Breen', color: '#00cccc', hull: 60, speed: 1.8, fireRate: 100, score: 120, size: 15 },
-    borg: { name: 'Borg', color: '#00ff00', hull: 150, speed: 1.5, fireRate: 80, score: 300, size: 22 }
+    jemhadar: { name: "Jem'Hadar", color: '#9944ff', hull: 40, speed: 2.5, fireRate: 120, score: 100, size: 18 },
+    cardassian: { name: 'Cardassien', color: '#ccaa00', hull: 50, speed: 2, fireRate: 150, score: 80, size: 20 },
+    breen: { name: 'Breen', color: '#00cccc', hull: 60, speed: 1.8, fireRate: 100, score: 120, size: 18 },
+    borg: { name: 'Borg', color: '#00ff00', hull: 150, speed: 1.5, fireRate: 80, score: 300, size: 28 }
 };
 
 // --- Friendly ships ---
@@ -320,95 +320,214 @@ function drawNebulae() {
 }
 
 function drawDS9(pos) {
-    const s = 1; // scale
     ctx.save();
     ctx.translate(pos.x, pos.y);
-    ctx.rotate(ds9.rotation);
 
-    // Outer ring
-    ctx.strokeStyle = '#886644';
-    ctx.lineWidth = 4;
+    const rot = ds9.rotation;
+    // DS9 is viewed top-down in iso perspective
+    // The station has: outer docking ring, habitat ring, promenade, central core
+    // Connected by 3 pairs of upper/lower docking pylons and crossover bridges
+
+    // === Ambient glow around the whole station ===
+    const ambGrad = ctx.createRadialGradient(0, 0, 40, 0, 0, 140);
+    ambGrad.addColorStop(0, 'rgba(255, 160, 80, 0.06)');
+    ambGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = ambGrad;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 90 * s, 45 * s, 0, 0, Math.PI * 2);
+    ctx.arc(0, 0, 140, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === Outer Docking Ring (the big outer circle) ===
+    // Thick filled ring
+    ctx.strokeStyle = '#7a6a55';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 105, 52, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Ring inner edge
+    ctx.strokeStyle = '#5a4a38';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 101, 50, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Ring outer edge highlight
+    ctx.strokeStyle = '#9a8a70';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 109, 54, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Inner ring glow
-    ctx.strokeStyle = '#ff880044';
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 90 * s, 45 * s, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    // Docking ring segment lights (windows on the ring)
+    for (let i = 0; i < 36; i++) {
+        const a = (i / 36) * Math.PI * 2 + rot;
+        const lx = Math.cos(a) * 105;
+        const ly = Math.sin(a) * 52;
+        const blink = Math.sin(gameTime * 0.008 + i * 0.4) * 0.2 + 0.5;
+        ctx.fillStyle = `rgba(255, 200, 130, ${blink})`;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
 
-    // Second ring
-    ctx.strokeStyle = '#776655';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 70 * s, 35 * s, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Inner habitat ring
-    ctx.strokeStyle = '#998877';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 45 * s, 22 * s, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Docking pylons (6)
+    // === 6 Docking Pylons (3 upper arching up, 3 lower arching down) ===
+    // They connect outer ring to inner habitat ring, curving outward
     for (let i = 0; i < 6; i++) {
-        const angle = (i / 6) * Math.PI * 2 + ds9.rotation;
-        const outerX = Math.cos(angle) * 95 * s;
-        const outerY = Math.sin(angle) * 47 * s;
-        const innerX = Math.cos(angle) * 50 * s;
-        const innerY = Math.sin(angle) * 25 * s;
+        const a = (i / 6) * Math.PI * 2 + rot;
+        const isUpper = i % 2 === 0;
 
-        ctx.strokeStyle = '#665544';
-        ctx.lineWidth = 2;
+        // Pylon base on habitat ring
+        const innerX = Math.cos(a) * 58;
+        const innerY = Math.sin(a) * 29;
+        // Pylon tip on docking ring
+        const outerX = Math.cos(a) * 105;
+        const outerY = Math.sin(a) * 52;
+        // Control point for curve (arch effect)
+        const midX = Math.cos(a) * 85;
+        const midY = Math.sin(a) * 42 + (isUpper ? -12 : 8);
+
+        ctx.strokeStyle = '#8a7a60';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.quadraticCurveTo(midX, midY, outerX, outerY);
+        ctx.stroke();
+
+        // Pylon structural detail line
+        ctx.strokeStyle = '#6a5a45';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.quadraticCurveTo(midX + (isUpper ? -2 : 2), midY + (isUpper ? -2 : 2), outerX, outerY);
+        ctx.stroke();
+
+        // Pylon tip docking port (small rectangle-ish shape)
+        ctx.fillStyle = '#9a8a70';
+        ctx.beginPath();
+        ctx.arc(outerX, outerY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Running light on pylon tip
+        const blink = Math.sin(gameTime * 0.04 + i * 1.05) > 0.3 ? 1 : 0.2;
+        ctx.fillStyle = `rgba(255, 120, 40, ${blink})`;
+        ctx.beginPath();
+        ctx.arc(outerX, outerY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // === Crossover Bridges (3 straight connectors, thinner) ===
+    for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + rot + Math.PI / 6;
+        const innerX = Math.cos(a) * 45;
+        const innerY = Math.sin(a) * 22;
+        const outerX = Math.cos(a) * 101;
+        const outerY = Math.sin(a) * 50;
+
+        ctx.strokeStyle = '#6a5a48';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(innerX, innerY);
         ctx.lineTo(outerX, outerY);
         ctx.stroke();
+    }
 
-        // Pylon tip light
-        const blink = Math.sin(gameTime * 0.03 + i) > 0 ? 1 : 0.3;
-        ctx.fillStyle = `rgba(255, 136, 0, ${blink})`;
+    // === Habitat Ring (middle ring, thicker - this is the Promenade level) ===
+    // Fill the ring as a thick band
+    ctx.strokeStyle = '#8a7a65';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 55, 27, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Inner edge
+    ctx.strokeStyle = '#6a5a48';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 50, 24, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Outer edge
+    ctx.strokeStyle = '#a09080';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 60, 30, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Promenade windows (warm lights along the habitat ring)
+    for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2 + rot * 0.5;
+        const lx = Math.cos(a) * 55;
+        const ly = Math.sin(a) * 27;
+        const blink = Math.sin(gameTime * 0.012 + i * 0.7) * 0.25 + 0.65;
+        ctx.fillStyle = `rgba(255, 220, 140, ${blink})`;
         ctx.beginPath();
-        ctx.arc(outerX, outerY, 3, 0, Math.PI * 2);
+        ctx.arc(lx, ly, 1.3, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // Central core (Ops)
-    const grad = ctx.createRadialGradient(0, -5, 0, 0, -5, 25 * s);
-    grad.addColorStop(0, '#ffaa66');
-    grad.addColorStop(0.4, '#996644');
-    grad.addColorStop(1, '#443322');
-    ctx.fillStyle = grad;
+    // === Inner Weapon Sail / Shield Ring ===
+    ctx.strokeStyle = '#7a6a55';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(0, -5, 25 * s, 18 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.ellipse(0, 0, 32, 16, 0, 0, Math.PI * 2);
+    ctx.stroke();
 
-    // Ops windows glow
-    ctx.fillStyle = `rgba(255, 170, 50, ${0.5 + Math.sin(gameTime * 0.02) * 0.2})`;
+    // === Central Core (Ops module at top) ===
+    // Lower core section (reactor/power)
+    const coreGrad = ctx.createRadialGradient(0, 3, 0, 0, 3, 22);
+    coreGrad.addColorStop(0, '#a09080');
+    coreGrad.addColorStop(0.5, '#7a6a58');
+    coreGrad.addColorStop(1, '#4a3a2a');
+    ctx.fillStyle = coreGrad;
     ctx.beginPath();
-    ctx.ellipse(0, -5, 8 * s, 5 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 3, 22, 14, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = '#5a4a38';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    // Promenade lights
-    for (let i = 0; i < 12; i++) {
-        const a = (i / 12) * Math.PI * 2;
-        const lx = Math.cos(a) * 45 * s;
-        const ly = Math.sin(a) * 22 * s;
-        const blink = Math.sin(gameTime * 0.01 + i * 0.5) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(255, 200, 100, ${blink * 0.6})`;
+    // Upper Ops tower (raised dome)
+    const opsGrad = ctx.createRadialGradient(0, -4, 0, 0, -4, 14);
+    opsGrad.addColorStop(0, '#c0a880');
+    opsGrad.addColorStop(0.6, '#9a8060');
+    opsGrad.addColorStop(1, '#6a5a40');
+    ctx.fillStyle = opsGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, -4, 14, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#b09878';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Ops windows (the big viewports at the top of the station)
+    const opsAlpha = 0.6 + Math.sin(gameTime * 0.025) * 0.15;
+    for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + gameTime * 0.001;
+        const wx = Math.cos(a) * 9;
+        const wy = Math.sin(a) * 6 - 4;
+        ctx.fillStyle = `rgba(255, 200, 100, ${opsAlpha})`;
         ctx.beginPath();
-        ctx.arc(lx, ly, 1.5, 0, Math.PI * 2);
+        ctx.arc(wx, wy, 1.5, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // DS9 label
-    ctx.fillStyle = 'rgba(255, 153, 0, 0.6)';
+    // Central Ops top light (the beacon)
+    const beaconAlpha = 0.7 + Math.sin(gameTime * 0.05) * 0.3;
+    ctx.fillStyle = `rgba(255, 180, 80, ${beaconAlpha})`;
+    ctx.beginPath();
+    ctx.arc(0, -6, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Beacon glow
+    const beaconGlow = ctx.createRadialGradient(0, -6, 0, 0, -6, 12);
+    beaconGlow.addColorStop(0, `rgba(255, 180, 80, ${beaconAlpha * 0.3})`);
+    beaconGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = beaconGlow;
+    ctx.beginPath();
+    ctx.arc(0, -6, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === Station Label ===
+    ctx.fillStyle = 'rgba(255, 170, 80, 0.5)';
     ctx.font = '10px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('DEEP SPACE 9', 0, 60 * s);
+    ctx.fillText('DEEP SPACE 9', 0, 70);
 
     ctx.restore();
 }
@@ -422,8 +541,8 @@ function drawDefiant(pos) {
     // Engine trail
     if (defiant.speed > 0.5) {
         defiant.engineTrail.push({
-            x: defiant.x - Math.cos(dir) * 15,
-            y: defiant.y - Math.sin(dir) * 15,
+            x: defiant.x - Math.cos(dir) * 20,
+            y: defiant.y - Math.sin(dir) * 20,
             life: 30,
             maxLife: 30
         });
@@ -431,170 +550,540 @@ function drawDefiant(pos) {
 
     // Shield bubble
     if (defiant.shieldsActive && defiant.shields > 0) {
-        const shieldAlpha = 0.15 + Math.sin(gameTime * 0.1) * 0.05;
-        const shieldGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 30);
-        shieldGrad.addColorStop(0, `rgba(100, 150, 255, 0)`);
-        shieldGrad.addColorStop(0.7, `rgba(100, 150, 255, ${shieldAlpha})`);
-        shieldGrad.addColorStop(1, `rgba(100, 150, 255, 0)`);
+        const shieldAlpha = 0.12 + Math.sin(gameTime * 0.1) * 0.05;
+        const shieldGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 35);
+        shieldGrad.addColorStop(0, 'rgba(100, 180, 255, 0)');
+        shieldGrad.addColorStop(0.6, `rgba(100, 180, 255, ${shieldAlpha})`);
+        shieldGrad.addColorStop(0.85, `rgba(80, 140, 255, ${shieldAlpha * 0.7})`);
+        shieldGrad.addColorStop(1, 'rgba(100, 180, 255, 0)');
         ctx.fillStyle = shieldGrad;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 35, 22, dir - Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // Ship body - compact Defiant shape
+    // Rotate to ship direction
     ctx.rotate(dir - Math.PI / 4);
 
-    // Main hull
-    ctx.fillStyle = '#8899aa';
+    // === USS Defiant NX-74205 ===
+    // Top-down view: compact arrowhead warship
+    // Ref: flat triangular primary hull, stubby integrated nacelles, no neck
+
+    // --- Main hull shadow/depth ---
+    ctx.fillStyle = '#5a6570';
     ctx.beginPath();
-    ctx.moveTo(18, 0);      // Nose
-    ctx.lineTo(5, -8);      // Left front
-    ctx.lineTo(-10, -10);   // Left wing
-    ctx.lineTo(-15, -5);    // Left back
-    ctx.lineTo(-15, 5);     // Right back
-    ctx.lineTo(-10, 10);    // Right wing
-    ctx.lineTo(5, 8);       // Right front
+    ctx.moveTo(24, 0);         // Nose tip
+    ctx.lineTo(14, -5);
+    ctx.lineTo(4, -9);
+    ctx.lineTo(-8, -12);       // Port wing trailing edge
+    ctx.lineTo(-16, -10);
+    ctx.lineTo(-20, -6);       // Port aft
+    ctx.lineTo(-20, 6);        // Starboard aft
+    ctx.lineTo(-16, 10);
+    ctx.lineTo(-8, 12);        // Starboard wing trailing edge
+    ctx.lineTo(4, 9);
+    ctx.lineTo(14, 5);
     ctx.closePath();
     ctx.fill();
 
-    // Hull details
-    ctx.strokeStyle = '#667788';
+    // --- Main hull (lighter top surface) ---
+    ctx.fillStyle = '#8a95a2';
+    ctx.beginPath();
+    ctx.moveTo(23, 0);         // Nose tip
+    ctx.lineTo(14, -4.5);
+    ctx.lineTo(5, -8.5);
+    ctx.lineTo(-7, -11);
+    ctx.lineTo(-15, -9.5);
+    ctx.lineTo(-19, -5.5);
+    ctx.lineTo(-19, 5.5);
+    ctx.lineTo(-15, 9.5);
+    ctx.lineTo(-7, 11);
+    ctx.lineTo(5, 8.5);
+    ctx.lineTo(14, 4.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Hull panel lines
+    ctx.strokeStyle = '#6a7580';
     ctx.lineWidth = 0.5;
     ctx.stroke();
 
-    // Bridge section
-    ctx.fillStyle = '#99aacc';
+    // --- Hull center ridge line ---
+    ctx.strokeStyle = '#9aa5b0';
+    ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.ellipse(8, 0, 6, 4, 0, 0, Math.PI * 2);
+    ctx.moveTo(22, 0);
+    ctx.lineTo(-18, 0);
+    ctx.stroke();
+
+    // --- Hull plating details (panel lines) ---
+    ctx.strokeStyle = 'rgba(100, 115, 130, 0.5)';
+    ctx.lineWidth = 0.4;
+    // Port panel
+    ctx.beginPath();
+    ctx.moveTo(10, -3);
+    ctx.lineTo(-10, -8);
+    ctx.stroke();
+    // Starboard panel
+    ctx.beginPath();
+    ctx.moveTo(10, 3);
+    ctx.lineTo(-10, 8);
+    ctx.stroke();
+    // Cross panels
+    ctx.beginPath();
+    ctx.moveTo(0, -7);
+    ctx.lineTo(0, 7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-10, -9);
+    ctx.lineTo(-10, 9);
+    ctx.stroke();
+
+    // --- Deflector dish (front underside, blue-orange glow) ---
+    const deflAlpha = 0.6 + Math.sin(gameTime * 0.06) * 0.2;
+    ctx.fillStyle = `rgba(80, 160, 255, ${deflAlpha * 0.5})`;
+    ctx.beginPath();
+    ctx.ellipse(18, 0, 4, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(150, 200, 255, ${deflAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(18, 0, 2, 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bridge window
-    ctx.fillStyle = `rgba(150, 200, 255, ${0.6 + Math.sin(gameTime * 0.05) * 0.2})`;
+    // --- Bridge module (raised section, slightly forward) ---
+    ctx.fillStyle = '#a0aab5';
     ctx.beginPath();
-    ctx.ellipse(10, 0, 3, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(6, 0, 7, 4.5, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = '#8a95a0';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
 
-    // Nacelles
-    ctx.fillStyle = '#6677aa';
-    ctx.fillRect(-14, -11, 8, 3);
-    ctx.fillRect(-14, 8, 8, 3);
-
-    // Nacelle glow
-    const engineGlow = defiant.speed > 0.5 ? 0.8 : 0.3;
-    ctx.fillStyle = `rgba(100, 150, 255, ${engineGlow})`;
-    ctx.fillRect(-15, -11, 2, 3);
-    ctx.fillRect(-15, 8, 2, 3);
-
-    // Impulse engine glow
-    if (defiant.speed > 0.5) {
-        const turbo = keys['ShiftLeft'] || keys['ShiftRight'] || touch.turbo;
-        const engineColor = turbo ? 'rgba(255, 150, 50, 0.8)' : 'rgba(255, 100, 50, 0.6)';
-        const engineSize = turbo ? 12 : 8;
-        const grad = ctx.createRadialGradient(-15, 0, 0, -15, 0, engineSize);
-        grad.addColorStop(0, engineColor);
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
+    // Bridge windows (row of small lights)
+    const winAlpha = 0.5 + Math.sin(gameTime * 0.04) * 0.2;
+    ctx.fillStyle = `rgba(200, 230, 255, ${winAlpha})`;
+    for (let i = -3; i <= 3; i++) {
+        const wx = 6 + Math.cos(i * 0.35) * 5;
+        const wy = Math.sin(i * 0.35) * 3;
         ctx.beginPath();
-        ctx.arc(-15, 0, engineSize, 0, Math.PI * 2);
+        ctx.arc(wx, wy, 0.7, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // Defiant label
+    // --- Warp Nacelles (compact, tucked into the hull) ---
+    // Port nacelle (top in top-down view)
+    ctx.fillStyle = '#6a7585';
+    ctx.beginPath();
+    ctx.moveTo(-6, -9);
+    ctx.lineTo(-6, -12.5);
+    ctx.lineTo(-19, -11);
+    ctx.lineTo(-19, -7.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a6570';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Starboard nacelle
+    ctx.fillStyle = '#6a7585';
+    ctx.beginPath();
+    ctx.moveTo(-6, 9);
+    ctx.lineTo(-6, 12.5);
+    ctx.lineTo(-19, 11);
+    ctx.lineTo(-19, 7.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a6570';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // --- Nacelle Bussard Collectors (front of nacelles, reddish glow) ---
+    const bussardAlpha = 0.5 + Math.sin(gameTime * 0.08) * 0.3;
+    ctx.fillStyle = `rgba(255, 80, 50, ${bussardAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(-6, -10.8, 1.5, 1.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(255, 80, 50, ${bussardAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(-6, 10.8, 1.5, 1.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Warp field grilles (blue glow strips along nacelles) ---
+    const warpGlow = defiant.speed > 0.5 ? 0.8 : 0.3;
+    ctx.strokeStyle = `rgba(100, 170, 255, ${warpGlow})`;
+    ctx.lineWidth = 1.5;
+    // Port
+    ctx.beginPath();
+    ctx.moveTo(-8, -11.8);
+    ctx.lineTo(-18, -10.5);
+    ctx.stroke();
+    // Starboard
+    ctx.beginPath();
+    ctx.moveTo(-8, 11.8);
+    ctx.lineTo(-18, 10.5);
+    ctx.stroke();
+    // Glow effect
+    ctx.strokeStyle = `rgba(100, 170, 255, ${warpGlow * 0.3})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-8, -11.8);
+    ctx.lineTo(-18, -10.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-8, 11.8);
+    ctx.lineTo(-18, 10.5);
+    ctx.stroke();
+
+    // --- Impulse engines (aft, reddish-orange glow when moving) ---
+    if (defiant.speed > 0.3) {
+        const turbo = keys['ShiftLeft'] || keys['ShiftRight'] || touch.turbo;
+        const impulseAlpha = turbo ? 0.9 : 0.6;
+        const impulseSize = turbo ? 14 : 9;
+        // Main impulse
+        const impGrad = ctx.createRadialGradient(-20, 0, 0, -20, 0, impulseSize);
+        impGrad.addColorStop(0, `rgba(255, 180, 80, ${impulseAlpha})`);
+        impGrad.addColorStop(0.4, `rgba(255, 120, 40, ${impulseAlpha * 0.6})`);
+        impGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = impGrad;
+        ctx.beginPath();
+        ctx.arc(-20, 0, impulseSize, 0, Math.PI * 2);
+        ctx.fill();
+        // Impulse vents (two on each side of aft)
+        ctx.fillStyle = `rgba(255, 140, 60, ${impulseAlpha * 0.7})`;
+        ctx.fillRect(-20, -5, 2, 3);
+        ctx.fillRect(-20, 2, 2, 3);
+    }
+
+    // Aft impulse housing (always visible)
+    ctx.fillStyle = '#70808e';
+    ctx.fillRect(-20, -5.5, 3, 11);
+
+    // --- Running lights ---
+    // Port (red)
+    const rlBlink = Math.sin(gameTime * 0.06) > 0 ? 0.9 : 0.2;
+    ctx.fillStyle = `rgba(255, 40, 40, ${rlBlink})`;
+    ctx.beginPath();
+    ctx.arc(-7, -12, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    // Starboard (green)
+    ctx.fillStyle = `rgba(40, 255, 40, ${rlBlink})`;
+    ctx.beginPath();
+    ctx.arc(-7, 12, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Registry number ---
     ctx.rotate(-(dir - Math.PI / 4));
-    ctx.fillStyle = 'rgba(150, 200, 255, 0.5)';
-    ctx.font = '9px Courier New';
+    ctx.fillStyle = 'rgba(150, 200, 255, 0.45)';
+    ctx.font = '8px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('DEFIANT', 0, 25);
+    ctx.fillText('NX-74205', 0, 28);
 
     ctx.restore();
 }
 
 function drawEnemy(enemy) {
     const pos = worldToScreen(enemy.x, enemy.y);
-    if (pos.x < -50 || pos.x > canvas.width + 50 || pos.y < -50 || pos.y > canvas.height + 50) return;
+    if (pos.x < -60 || pos.x > canvas.width + 60 || pos.y < -60 || pos.y > canvas.height + 60) return;
+
+    const type = ENEMY_TYPES[enemy.type];
+    const s = type.size;
 
     ctx.save();
     ctx.translate(pos.x, pos.y);
     ctx.rotate(enemy.angle - Math.PI / 4);
 
-    const type = ENEMY_TYPES[enemy.type];
-    const s = type.size;
-
     if (enemy.type === 'jemhadar') {
-        // Jem'Hadar attack ship - insect-like
-        ctx.fillStyle = '#6622aa';
+        // === Jem'Hadar Attack Ship ===
+        // Beetle/scarab shaped: wide curved front, tapered back, organic look
+        // Dark purple hull with violet accents
+
+        // Wing shadow
+        ctx.fillStyle = '#2a1045';
         ctx.beginPath();
-        ctx.moveTo(s, 0);
-        ctx.lineTo(0, -s * 0.7);
-        ctx.lineTo(-s * 0.8, -s * 0.5);
-        ctx.lineTo(-s, 0);
-        ctx.lineTo(-s * 0.8, s * 0.5);
-        ctx.lineTo(0, s * 0.7);
+        ctx.moveTo(s * 0.9, 0);
+        ctx.quadraticCurveTo(s * 0.5, -s * 0.9, -s * 0.3, -s * 0.8);
+        ctx.lineTo(-s, -s * 0.35);
+        ctx.lineTo(-s * 1.1, 0);
+        ctx.lineTo(-s, s * 0.35);
+        ctx.lineTo(-s * 0.3, s * 0.8);
+        ctx.quadraticCurveTo(s * 0.5, s * 0.9, s * 0.9, 0);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#9944ff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        // Engine glow
-        ctx.fillStyle = 'rgba(153, 51, 255, 0.6)';
+
+        // Main hull
+        ctx.fillStyle = '#4a2075';
         ctx.beginPath();
-        ctx.arc(-s, 0, 4, 0, Math.PI * 2);
+        ctx.moveTo(s * 0.85, 0);
+        ctx.quadraticCurveTo(s * 0.45, -s * 0.75, -s * 0.25, -s * 0.7);
+        ctx.lineTo(-s * 0.9, -s * 0.3);
+        ctx.lineTo(-s, 0);
+        ctx.lineTo(-s * 0.9, s * 0.3);
+        ctx.lineTo(-s * 0.25, s * 0.7);
+        ctx.quadraticCurveTo(s * 0.45, s * 0.75, s * 0.85, 0);
+        ctx.closePath();
         ctx.fill();
+
+        // Hull ridge (center spine)
+        ctx.strokeStyle = '#6a3aaa';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(s * 0.7, 0);
+        ctx.lineTo(-s * 0.8, 0);
+        ctx.stroke();
+
+        // Wing veins (organic look)
+        ctx.strokeStyle = 'rgba(120, 60, 180, 0.5)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(s * 0.3, -s * 0.15);
+        ctx.quadraticCurveTo(0, -s * 0.5, -s * 0.5, -s * 0.55);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(s * 0.3, s * 0.15);
+        ctx.quadraticCurveTo(0, s * 0.5, -s * 0.5, s * 0.55);
+        ctx.stroke();
+
+        // Cockpit (forward)
+        ctx.fillStyle = '#7a45c0';
+        ctx.beginPath();
+        ctx.ellipse(s * 0.4, 0, s * 0.25, s * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Engine glow (aft, purple)
+        const engAlpha = 0.5 + Math.sin(gameTime * 0.08) * 0.2;
+        const engGrad = ctx.createRadialGradient(-s, 0, 0, -s, 0, s * 0.5);
+        engGrad.addColorStop(0, `rgba(160, 80, 255, ${engAlpha})`);
+        engGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = engGrad;
+        ctx.beginPath();
+        ctx.arc(-s, 0, s * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
     } else if (enemy.type === 'cardassian') {
-        // Cardassian Galor class
-        ctx.fillStyle = '#aa8800';
+        // === Cardassian Galor Class ===
+        // Long forward "neck" weapon array, wide aft hull with angled wings
+        // Yellow-brown metallic color
+
+        // Aft hull (wider section)
+        ctx.fillStyle = '#6a5520';
         ctx.beginPath();
-        ctx.moveTo(s * 1.2, 0);
-        ctx.lineTo(s * 0.3, -s * 0.3);
-        ctx.lineTo(-s * 0.5, -s * 0.8);
-        ctx.lineTo(-s, -s * 0.3);
-        ctx.lineTo(-s, s * 0.3);
-        ctx.lineTo(-s * 0.5, s * 0.8);
-        ctx.lineTo(s * 0.3, s * 0.3);
+        ctx.moveTo(-s * 0.1, -s * 0.3);
+        ctx.lineTo(-s * 0.6, -s * 0.9);  // Port wing
+        ctx.lineTo(-s * 1.1, -s * 0.5);
+        ctx.lineTo(-s * 1.1, s * 0.5);
+        ctx.lineTo(-s * 0.6, s * 0.9);    // Starboard wing
+        ctx.lineTo(-s * 0.1, s * 0.3);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#ccaa00';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#8a7530';
+        ctx.lineWidth = 0.8;
         ctx.stroke();
+
+        // Main hull top
+        ctx.fillStyle = '#8a7530';
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.15, -s * 0.25);
+        ctx.lineTo(-s * 0.55, -s * 0.75);
+        ctx.lineTo(-s, -s * 0.45);
+        ctx.lineTo(-s, s * 0.45);
+        ctx.lineTo(-s * 0.55, s * 0.75);
+        ctx.lineTo(-s * 0.15, s * 0.25);
+        ctx.closePath();
+        ctx.fill();
+
+        // Forward weapon array / neck (long narrow section)
+        ctx.fillStyle = '#7a6528';
+        ctx.beginPath();
+        ctx.moveTo(s * 1.3, 0);            // Tip of weapon array
+        ctx.lineTo(s * 0.5, -s * 0.12);
+        ctx.lineTo(-s * 0.1, -s * 0.2);
+        ctx.lineTo(-s * 0.1, s * 0.2);
+        ctx.lineTo(s * 0.5, s * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#9a8540';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+
+        // Weapon tip glow
+        const wpnAlpha = 0.5 + Math.sin(gameTime * 0.07) * 0.25;
+        ctx.fillStyle = `rgba(255, 200, 50, ${wpnAlpha})`;
+        ctx.beginPath();
+        ctx.arc(s * 1.3, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Central raised section
+        ctx.fillStyle = '#a09040';
+        ctx.beginPath();
+        ctx.ellipse(-s * 0.4, 0, s * 0.35, s * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bridge windows
+        ctx.fillStyle = `rgba(255, 220, 100, 0.5)`;
+        ctx.beginPath();
+        ctx.ellipse(-s * 0.4, 0, s * 0.12, s * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Engine glow
+        const cEngAlpha = 0.4 + Math.sin(gameTime * 0.06) * 0.2;
+        ctx.fillStyle = `rgba(255, 180, 50, ${cEngAlpha})`;
+        ctx.beginPath();
+        ctx.arc(-s * 1.1, -s * 0.2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-s * 1.1, s * 0.2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
     } else if (enemy.type === 'breen') {
-        // Breen warship
-        ctx.fillStyle = '#008888';
+        // === Breen Warship ===
+        // Asymmetric, angular, aggressive - forward crescent shape
+        // Teal/cyan coloring, icy appearance
+
+        // Main hull (crescent shape)
+        ctx.fillStyle = '#1a5555';
         ctx.beginPath();
-        ctx.moveTo(s, 0);
-        ctx.lineTo(0, -s);
-        ctx.lineTo(-s * 0.6, -s * 0.4);
-        ctx.lineTo(-s, 0);
-        ctx.lineTo(-s * 0.6, s * 0.4);
-        ctx.lineTo(0, s);
+        ctx.moveTo(s * 0.9, 0);
+        ctx.lineTo(s * 0.3, -s * 0.6);
+        ctx.lineTo(-s * 0.2, -s * 0.9);    // Port crescent tip
+        ctx.lineTo(-s * 0.5, -s * 0.7);
+        ctx.lineTo(-s * 0.7, -s * 0.3);
+        ctx.lineTo(-s * 0.8, 0);
+        ctx.lineTo(-s * 0.7, s * 0.3);
+        ctx.lineTo(-s * 0.5, s * 0.7);
+        ctx.lineTo(-s * 0.2, s * 0.9);      // Starboard crescent tip
+        ctx.lineTo(s * 0.3, s * 0.6);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#00cccc';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-    } else if (enemy.type === 'borg') {
-        // Borg cube
-        ctx.fillStyle = '#115511';
-        ctx.fillRect(-s / 2, -s / 2, s, s);
-        ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-s / 2, -s / 2, s, s);
-        // Grid lines
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+
+        // Top surface
+        ctx.fillStyle = '#2a7575';
+        ctx.beginPath();
+        ctx.moveTo(s * 0.8, 0);
+        ctx.lineTo(s * 0.25, -s * 0.5);
+        ctx.lineTo(-s * 0.15, -s * 0.78);
+        ctx.lineTo(-s * 0.45, -s * 0.6);
+        ctx.lineTo(-s * 0.6, -s * 0.25);
+        ctx.lineTo(-s * 0.7, 0);
+        ctx.lineTo(-s * 0.6, s * 0.25);
+        ctx.lineTo(-s * 0.45, s * 0.6);
+        ctx.lineTo(-s * 0.15, s * 0.78);
+        ctx.lineTo(s * 0.25, s * 0.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Center structure
+        ctx.fillStyle = '#3a9090';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, s * 0.35, s * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hull lines (icy cracks)
+        ctx.strokeStyle = 'rgba(100, 220, 220, 0.4)';
         ctx.lineWidth = 0.5;
-        for (let i = -s / 2; i < s / 2; i += s / 4) {
+        ctx.beginPath();
+        ctx.moveTo(s * 0.5, -s * 0.15);
+        ctx.lineTo(-s * 0.3, -s * 0.65);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(s * 0.5, s * 0.15);
+        ctx.lineTo(-s * 0.3, s * 0.65);
+        ctx.stroke();
+
+        // Energy weapon glow (crescent tips)
+        const breenAlpha = 0.4 + Math.sin(gameTime * 0.09) * 0.3;
+        ctx.fillStyle = `rgba(100, 255, 255, ${breenAlpha})`;
+        ctx.beginPath();
+        ctx.arc(-s * 0.2, -s * 0.85, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-s * 0.2, s * 0.85, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Engine
+        const bEngGrad = ctx.createRadialGradient(-s * 0.8, 0, 0, -s * 0.8, 0, s * 0.3);
+        bEngGrad.addColorStop(0, `rgba(100, 255, 255, 0.5)`);
+        bEngGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = bEngGrad;
+        ctx.beginPath();
+        ctx.arc(-s * 0.8, 0, s * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+    } else if (enemy.type === 'borg') {
+        // === Borg Cube ===
+        // Perfect cube viewed at angle, with green glow, mechanical surface
+        // Much larger and more menacing
+
+        // Cube shadow/depth
+        ctx.fillStyle = '#0a2a0a';
+        ctx.fillRect(-s * 0.55, -s * 0.55, s * 1.1, s * 1.1);
+
+        // Main cube face
+        ctx.fillStyle = '#1a3a1a';
+        ctx.fillRect(-s * 0.5, -s * 0.5, s, s);
+
+        // Mechanical grid pattern
+        ctx.strokeStyle = 'rgba(0, 200, 0, 0.25)';
+        ctx.lineWidth = 0.3;
+        const gridStep = s / 6;
+        for (let i = -s * 0.5; i <= s * 0.5; i += gridStep) {
             ctx.beginPath();
-            ctx.moveTo(i, -s / 2);
-            ctx.lineTo(i, s / 2);
+            ctx.moveTo(i, -s * 0.5);
+            ctx.lineTo(i, s * 0.5);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(-s / 2, i);
-            ctx.lineTo(s / 2, i);
+            ctx.moveTo(-s * 0.5, i);
+            ctx.lineTo(s * 0.5, i);
             ctx.stroke();
         }
-        // Green glow
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.15)';
-        ctx.fillRect(-s * 0.7, -s * 0.7, s * 1.4, s * 1.4);
+
+        // Random machinery lights
+        for (let gx = 0; gx < 5; gx++) {
+            for (let gy = 0; gy < 5; gy++) {
+                const seed = (gx * 7 + gy * 13 + Math.floor(gameTime * 0.02)) % 5;
+                if (seed < 2) {
+                    const lx = -s * 0.4 + gx * gridStep;
+                    const ly = -s * 0.4 + gy * gridStep;
+                    const flicker = Math.sin(gameTime * 0.03 + gx * 2 + gy * 3) * 0.3 + 0.5;
+                    ctx.fillStyle = `rgba(0, 255, 0, ${flicker * 0.6})`;
+                    ctx.fillRect(lx, ly, gridStep * 0.5, gridStep * 0.5);
+                }
+            }
+        }
+
+        // Outer frame
+        ctx.strokeStyle = '#00cc00';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-s * 0.5, -s * 0.5, s, s);
+
+        // 3D edge effect (cube depth illusion)
+        ctx.strokeStyle = 'rgba(0, 180, 0, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.5, -s * 0.5);
+        ctx.lineTo(-s * 0.6, -s * 0.6);
+        ctx.moveTo(s * 0.5, -s * 0.5);
+        ctx.lineTo(s * 0.6, -s * 0.6);
+        ctx.moveTo(s * 0.5, s * 0.5);
+        ctx.lineTo(s * 0.6, s * 0.6);
+        ctx.moveTo(-s * 0.5, s * 0.5);
+        ctx.lineTo(-s * 0.6, s * 0.6);
+        ctx.stroke();
+
+        // Green ambient glow
+        const borgGlow = ctx.createRadialGradient(0, 0, s * 0.3, 0, 0, s * 0.9);
+        borgGlow.addColorStop(0, 'rgba(0, 255, 0, 0.08)');
+        borgGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = borgGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, s * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Central green eye
+        const eyeAlpha = 0.5 + Math.sin(gameTime * 0.05) * 0.3;
+        ctx.fillStyle = `rgba(0, 255, 80, ${eyeAlpha})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, s * 0.12, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     ctx.restore();
@@ -603,51 +1092,90 @@ function drawEnemy(enemy) {
     if (enemy.hull < ENEMY_TYPES[enemy.type].hull) {
         const hpPct = enemy.hull / ENEMY_TYPES[enemy.type].hull;
         ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        ctx.fillRect(pos.x - 15, pos.y - type.size - 8, 30, 3);
+        ctx.fillRect(pos.x - 15, pos.y - type.size - 10, 30, 3);
         ctx.fillStyle = hpPct > 0.5 ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 100, 0, 0.7)';
-        ctx.fillRect(pos.x - 15, pos.y - type.size - 8, 30 * hpPct, 3);
+        ctx.fillRect(pos.x - 15, pos.y - type.size - 10, 30 * hpPct, 3);
     }
 
     // Name tag
     ctx.fillStyle = type.color + '88';
     ctx.font = '8px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText(type.name, pos.x, pos.y + type.size + 12);
+    ctx.fillText(type.name, pos.x, pos.y + type.size + 14);
 }
 
 function drawWormhole() {
     const pos = worldToScreen(wormhole.x, wormhole.y);
-    if (pos.x < -100 || pos.x > canvas.width + 100 || pos.y < -100 || pos.y > canvas.height + 100) return;
+    if (pos.x < -150 || pos.x > canvas.width + 150 || pos.y < -150 || pos.y > canvas.height + 150) return;
 
     wormhole.pulsePhase += 0.02;
+    const t = wormhole.pulsePhase;
+    const R = wormhole.radius;
 
-    // Outer swirl
-    for (let ring = 5; ring >= 0; ring--) {
-        const r = wormhole.radius - ring * 8 + Math.sin(wormhole.pulsePhase + ring) * 5;
-        const alpha = 0.1 + ring * 0.03;
-        const hue = 200 + ring * 15 + Math.sin(wormhole.pulsePhase) * 20;
-        ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
-        ctx.lineWidth = 3;
+    // Outer ambient glow (large, soft)
+    const ambGrad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, R * 2);
+    ambGrad.addColorStop(0, `rgba(120, 160, 255, ${0.08 + Math.sin(t) * 0.03})`);
+    ambGrad.addColorStop(0.5, `rgba(80, 120, 220, 0.04)`);
+    ambGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = ambGrad;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, R * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Swirling energy rings (the wormhole spiral arms)
+    for (let arm = 0; arm < 4; arm++) {
+        const armAngle = (arm / 4) * Math.PI * 2 + t * 0.8;
+        ctx.strokeStyle = `hsla(${210 + arm * 15}, 80%, 70%, ${0.15 + Math.sin(t + arm) * 0.05})`;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.ellipse(pos.x, pos.y, r, r * 0.5, Math.sin(wormhole.pulsePhase * 0.5) * 0.2, 0, Math.PI * 2);
+        for (let p = 0; p < 40; p++) {
+            const pct = p / 40;
+            const spiralR = R * 0.1 + pct * R * 0.95;
+            const spiralAngle = armAngle + pct * Math.PI * 2.5;
+            const sx = pos.x + Math.cos(spiralAngle) * spiralR;
+            const sy = pos.y + Math.sin(spiralAngle) * spiralR * 0.5;
+            if (p === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+        }
         ctx.stroke();
     }
 
-    // Central glow
-    const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 40);
-    grad.addColorStop(0, `rgba(200, 220, 255, ${0.4 + Math.sin(wormhole.pulsePhase) * 0.2})`);
-    grad.addColorStop(0.5, 'rgba(100, 150, 255, 0.15)');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
+    // Concentric distortion rings
+    for (let ring = 0; ring < 6; ring++) {
+        const r = R * 0.15 + ring * R * 0.15 + Math.sin(t * 1.5 + ring * 0.8) * 4;
+        const alpha = 0.2 - ring * 0.025;
+        const hue = 200 + ring * 10 + Math.sin(t + ring) * 15;
+        ctx.strokeStyle = `hsla(${hue}, 75%, 65%, ${alpha})`;
+        ctx.lineWidth = 2 - ring * 0.2;
+        ctx.beginPath();
+        ctx.ellipse(pos.x, pos.y, r, r * 0.5,
+            Math.sin(t * 0.3 + ring * 0.5) * 0.15, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    // Inner bright vortex
+    const innerGrad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, R * 0.4);
+    const coreAlpha = 0.5 + Math.sin(t * 1.2) * 0.2;
+    innerGrad.addColorStop(0, `rgba(220, 235, 255, ${coreAlpha})`);
+    innerGrad.addColorStop(0.4, `rgba(150, 190, 255, ${coreAlpha * 0.5})`);
+    innerGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = innerGrad;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 40, 0, Math.PI * 2);
+    ctx.ellipse(pos.x, pos.y, R * 0.4, R * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White-hot center
+    const centerAlpha = 0.7 + Math.sin(t * 2) * 0.2;
+    ctx.fillStyle = `rgba(255, 255, 255, ${centerAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(pos.x, pos.y, 6, 3, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Label
     ctx.fillStyle = 'rgba(150, 200, 255, 0.5)';
     ctx.font = '9px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('TROU DE VER BAJORAN', pos.x, pos.y + wormhole.radius + 15);
+    ctx.fillText('TROU DE VER BAJORAN', pos.x, pos.y + R + 20);
 }
 
 function drawAsteroids() {

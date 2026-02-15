@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Trek: Deep Space Nine - USS Defiant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            color: #ff9900;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+        }
+        #hud-top {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+        }
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #ff6600;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 13px;
+            text-shadow: 0 0 8px #ff6600;
+        }
+        #minimap {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 180px;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #ff6600;
+            border-radius: 5px;
+        }
+        #mission-log {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            max-width: 400px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #ff6600;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 12px;
+        }
+        #mission-log .log-entry {
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+        #mission-log .log-entry:last-child {
+            opacity: 1;
+            color: #ffcc00;
+        }
+        #title-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, #0a0a2e 0%, #000 70%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        #title-screen h1 {
+            font-size: 48px;
+            color: #ff9900;
+            text-shadow: 0 0 30px #ff6600, 0 0 60px #ff3300;
+            letter-spacing: 8px;
+            margin-bottom: 10px;
+        }
+        #title-screen h2 {
+            font-size: 28px;
+            color: #6699ff;
+            text-shadow: 0 0 20px #3366ff;
+            letter-spacing: 4px;
+            margin-bottom: 40px;
+        }
+        #title-screen h3 {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 50px;
+            font-weight: normal;
+        }
+        #start-btn {
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            padding: 15px 50px;
+            background: transparent;
+            border: 2px solid #ff6600;
+            color: #ff9900;
+            cursor: pointer;
+            letter-spacing: 4px;
+            transition: all 0.3s;
+            pointer-events: all;
+        }
+        #start-btn:hover {
+            background: rgba(255, 102, 0, 0.2);
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.5);
+        }
+        .controls-info {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <div id="title-screen">
+        <h1>STAR TREK</h1>
+        <h2>DEEP SPACE NINE</h2>
+        <h3>USS Defiant NX-74205</h3>
+        <button id="start-btn">ENGAGER</button>
+        <div class="controls-info">
+            ZQSD / Flèches - Piloter le Defiant<br>
+            ESPACE - Phasers &nbsp;|&nbsp; F - Torpilles quantiques<br>
+            SHIFT - Turbo &nbsp;|&nbsp; E - Boucliers<br>
+            TAB - Scanner longue portée
+        </div>
+    </div>
+
+    <div id="hud" style="display:none;">
+        <div id="hud-top">
+            <div class="hud-panel" id="ship-status">
+                USS DEFIANT NX-74205<br>
+                Coque: <span id="hull">100</span>% &nbsp;|&nbsp;
+                Boucliers: <span id="shields">100</span>%
+            </div>
+            <div class="hud-panel" id="score-panel">
+                Score: <span id="score">0</span> &nbsp;|&nbsp;
+                <span id="mission-text">Patrouille autour de DS9</span>
+            </div>
+            <div class="hud-panel" id="weapons-panel">
+                Phasers: <span id="phaser-status">PRÊT</span> &nbsp;|&nbsp;
+                Torpilles: <span id="torpedo-count">20</span>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="minimap" style="display:none;"></canvas>
+
+    <div id="mission-log" style="display:none;">
+        <div class="log-entry">> Station DS9 en vue...</div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
